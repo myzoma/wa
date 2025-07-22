@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار Binance API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 اختبار Binance API</h1>
+        
+        <div id="status" class="status info">جاري التهيئة...</div>
+        
+        <div>
+            <button onclick="testConnection()">اختبار الاتصال</button>
+            <button onclick="getBTCPrice()">سعر البيتكوين</button>
+            <button onclick="getKlineData()">بيانات الشموع</button>
+            <button onclick="clearLog()">مسح السجل</button>
+        </div>
+        
+        <h3>سجل العمليات:</h3>
+        <div id="log"></div>
+    </div>
+
+    <script src="js/cors-proxy.js"></script>
+    <script src="js/binance-secure.js"></script>
+    
+    <script>
+        let api;
+        let logElement = document.getElementById('log');
+        let statusElement = document.getElementById('status');
+        
+        // Override console.log to show in our log area
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToScreen('[LOG] ' + args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToScreen('[ERROR] ' + args.join(' '));
+        };
+        
+        function logToScreen(message) {
+            const timestamp = new Date().toLocaleTimeString('ar-SA');
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateStatus(message, type = 'info') {
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+        
+        // Initialize API
+        window.addEventListener('load', async () => {
+            try {
+                logToScreen('بدء تهيئة Binance API...');
+                api = new SecureBinanceAPI();
+                
+                // Wait a bit for initialization
+                setTimeout(async () => {
+                    try {
+                        await api.testConnection();
+                        updateStatus('✅ تم الاتصال بنجاح!', 'success');
+                        logToScreen('✅ تم الاتصال بـ Binance API بنجاح!');
+                    } catch (error) {
+                        updateStatus('❌ فشل الاتصال', 'error');
+                        logToScreen('❌ فشل الاتصال: ' + error.message);
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                updateStatus('❌ فشل في التهيئة', 'error');
+                logToScreen('❌ فشل في تهيئة API: ' + error.message);
+            }
+        });
+        
+        async function testConnection() {
+            try {
+                logToScreen('🧪 اختبار الاتصال...');
+                updateStatus('⏳ جاري اختبار الاتصال...', 'info');
+                
+                const result = await api.testConnection();
+                updateStatus('✅ نجح اختبار الاتصال!', 'success');
+                logToScreen('✅ نجح اختبار الاتصال: ' + JSON.stringify(result));
+                
+            } catch (error) {
+                updateStatus('❌ فشل اختبار الاتصال', 'error');
+                logToScreen('❌ فشل اختبار الاتصال: ' + error.message);
+            }
+        }
+        
+        async function getBTCPrice() {
+            try {
+                logToScreen('💰 جلب سعر البيتكوين...');
+                updateStatus('⏳ جاري جلب سعر البيتكوين...', 'info');
+                
+                const priceData = await api.getCurrentPrice('BTCUSDT');
+                updateStatus(`₿ سعر البيتكوين: $${priceData.price}`, 'success');
+                logToScreen('💰 سعر البيتكوين: ' + JSON.stringify(priceData, null, 2));
+                
+            } catch (error) {
+                updateStatus('❌ فشل في جلب سعر البيتكوين', 'error');
+                logToScreen('❌ فشل في جلب سعر البيتكوين: ' + error.message);
+            }
+        }
+        
+        async function getKlineData() {
+            try {
+                logToScreen('📈 جلب بيانات الشموع للبيتكوين...');
+                updateStatus('⏳ جاري جلب بيانات الشموع...', 'info');
+                
+                const klineData = await api.getKlineData('BTCUSDT', '1h', 10);
+                updateStatus(`📊 تم جلب ${klineData.length} شمعة`, 'success');
+                logToScreen('📈 بيانات الشموع (آخر 10): ');
+                klineData.forEach((candle, index) => {
+                    logToScreen(`  ${index + 1}. فتح: ${candle.open}, أعلى: ${candle.high}, أقل: ${candle.low}, إغلاق: ${candle.close}`);
+                });
+                
+            } catch (error) {
+                updateStatus('❌ فشل في جلب بيانات الشموع', 'error');
+                logToScreen('❌ فشل في جلب بيانات الشموع: ' + error.message);
+            }
+        }
+        
+        function clearLog() {
+            logElement.textContent = '';
+        }
+    </script>
+</body>
+</html>
