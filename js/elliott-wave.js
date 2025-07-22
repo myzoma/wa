@@ -434,51 +434,180 @@ class ElliottWaveAnalyzer {
         return Math.min(confidence, 100);
     }
 
-    // حساب أهداف النمط الدافع
+    // حساب الأهداف السعرية الشاملة للموجات الدافعة
     calculateMotiveTargets(waves, isBullish) {
         const w1Length = waves.w1.length;
         const w3Length = waves.w3.length;
+        const w5Length = waves.w5.length;
         const startPrice = waves.w5.start.price;
         const direction = isBullish ? 1 : -1;
         
+        // أهداف الموجة 5 بناءً على الموجة 1
+        const wave5_w1_targets = {
+            fib236: startPrice + (direction * w1Length * this.config.fib236),
+            fib382: startPrice + (direction * w1Length * this.config.fib382),
+            fib500: startPrice + (direction * w1Length * this.config.fib500),
+            fib618: startPrice + (direction * w1Length * this.config.fib618),
+            fib764: startPrice + (direction * w1Length * this.config.fib764),
+            fib1000: startPrice + (direction * w1Length * this.config.fib1000),
+            fib1272: startPrice + (direction * w1Length * this.config.fib1272),
+            fib1618: startPrice + (direction * w1Length * this.config.fib1618),
+            fib2618: startPrice + (direction * w1Length * this.config.fib2618)
+        };
+        
+        // أهداف الموجة 5 بناءً على الموجة 3
+        const wave5_w3_targets = {
+            fib236: startPrice + (direction * w3Length * this.config.fib236),
+            fib382: startPrice + (direction * w3Length * this.config.fib382),
+            fib500: startPrice + (direction * w3Length * this.config.fib500),
+            fib618: startPrice + (direction * w3Length * this.config.fib618),
+            fib764: startPrice + (direction * w3Length * this.config.fib764)
+        };
+        
+        // أهداف الموجة 5 بناءً على المسافة الكلية (0 إلى 3)
+        const totalRange_0_to_3 = Math.abs(waves.w3.end.price - waves.w1.start.price);
+        const wave5_total_targets = {
+            fib382: waves.w1.start.price + (direction * totalRange_0_to_3 * this.config.fib382),
+            fib618: waves.w1.start.price + (direction * totalRange_0_to_3 * this.config.fib618),
+            fib1000: waves.w1.start.price + (direction * totalRange_0_to_3 * this.config.fib1000),
+            fib1618: waves.w1.start.price + (direction * totalRange_0_to_3 * this.config.fib1618)
+        };
+        
+        // أهداف النمط الكامل (إسقاط كامل)
+        const fullPatternLength = Math.abs(waves.w5.end.price - waves.w1.start.price);
+        const nextCycleTargets = {
+            extension100: waves.w5.end.price + (direction * fullPatternLength * 1.0),
+            extension127: waves.w5.end.price + (direction * fullPatternLength * this.config.fib1272),
+            extension162: waves.w5.end.price + (direction * fullPatternLength * this.config.fib1618),
+            extension262: waves.w5.end.price + (direction * fullPatternLength * this.config.fib2618)
+        };
+        
+        // أهداف التصحيح المتوقعة بعد النمط
+        const correctionTargets = {
+            correction236: waves.w5.end.price - (direction * fullPatternLength * this.config.fib236),
+            correction382: waves.w5.end.price - (direction * fullPatternLength * this.config.fib382),
+            correction500: waves.w5.end.price - (direction * fullPatternLength * this.config.fib500),
+            correction618: waves.w5.end.price - (direction * fullPatternLength * this.config.fib618),
+            correction786: waves.w5.end.price - (direction * fullPatternLength * 0.786)
+        };
+        
         return {
-            // أهداف الموجة 5 بناءً على الموجة 1
-            wave5_fib618: startPrice + (direction * w1Length * this.config.fib618),
-            wave5_fib1000: startPrice + (direction * w1Length * this.config.fib1000),
-            wave5_fib1618: startPrice + (direction * w1Length * this.config.fib1618),
+            // أهداف مفصلة للموجة 5
+            wave5_based_on_w1: wave5_w1_targets,
+            wave5_based_on_w3: wave5_w3_targets,
+            wave5_based_on_total: wave5_total_targets,
             
-            // أهداف الموجة 5 بناءً على الموجة 3
-            wave5_w3_fib382: startPrice + (direction * w3Length * this.config.fib382),
-            wave5_w3_fib618: startPrice + (direction * w3Length * this.config.fib618),
+            // أهداف الدورة القادمة
+            next_cycle_targets: nextCycleTargets,
+            
+            // أهداف التصحيح المتوقعة
+            correction_targets: correctionTargets,
+            
+            // الأهداف الأساسية (متوافق مع الكود القديم)
+            wave5_fib618: wave5_w1_targets.fib618,
+            wave5_fib1000: wave5_w1_targets.fib1000,
+            wave5_fib1618: wave5_w1_targets.fib1618,
+            wave5_w3_fib382: wave5_w3_targets.fib382,
+            wave5_w3_fib618: wave5_w3_targets.fib618,
             
             // الهدف النهائي للنمط
             finalTarget: waves.w5.end.price,
             
-            // مستويات الدعم والمقاومة
+            // مستويات الدعم والمقاومة المحسنة
             support: Math.min(waves.w2.end.price, waves.w4.end.price),
-            resistance: Math.max(waves.w1.end.price, waves.w3.end.price, waves.w5.end.price)
+            resistance: Math.max(waves.w1.end.price, waves.w3.end.price, waves.w5.end.price),
+            
+            // مستويات إضافية
+            keyLevels: {
+                wave1_end: waves.w1.end.price,
+                wave2_end: waves.w2.end.price,
+                wave3_end: waves.w3.end.price,
+                wave4_end: waves.w4.end.price,
+                wave5_end: waves.w5.end.price
+            },
+            
+            // تحليل الأولوية
+            priority: this.calculateTargetPriority(wave5_w1_targets, wave5_w3_targets, isBullish)
         };
     }
 
-    // حساب أهداف النمط التصحيحي
+    // حساب الأهداف السعرية الشاملة للأنماط التصحيحية
     calculateCorrectiveTargets(waves, isBullish) {
         const wALength = waves.wA.length;
+        const wBLength = waves.wB.length;
         const startPrice = waves.wC.start.price;
         const direction = isBullish ? 1 : -1;
         
+        // أهداف الموجة C بناءً على الموجة A (الأكثر شيوعاً)
+        const waveC_A_targets = {
+            fib236: startPrice + (direction * wALength * this.config.fib236),
+            fib382: startPrice + (direction * wALength * this.config.fib382),
+            fib500: startPrice + (direction * wALength * this.config.fib500),
+            fib618: startPrice + (direction * wALength * this.config.fib618),
+            fib764: startPrice + (direction * wALength * this.config.fib764),
+            fib1000: startPrice + (direction * wALength * this.config.fib1000),
+            fib1272: startPrice + (direction * wALength * this.config.fib1272),
+            fib1618: startPrice + (direction * wALength * this.config.fib1618),
+            fib2618: startPrice + (direction * wALength * this.config.fib2618)
+        };
+        
+        // أهداف الموجة C بناءً على الموجة B (أقل شيوعاً)
+        const waveC_B_targets = {
+            fib618: startPrice + (direction * wBLength * this.config.fib618),
+            fib1000: startPrice + (direction * wBLength * this.config.fib1000),
+            fib1618: startPrice + (direction * wBLength * this.config.fib1618)
+        };
+        
+        // أهداف التصحيح الكامل
+        const fullCorrectionLength = Math.abs(waves.wC.end.price - waves.wA.start.price);
+        const completionTargets = {
+            completion100: waves.wA.start.price,
+            completion127: waves.wA.start.price + (direction * fullCorrectionLength * this.config.fib1272),
+            completion162: waves.wA.start.price + (direction * fullCorrectionLength * this.config.fib1618)
+        };
+        
+        // أهداف النمط القادم بعد اكتمال التصحيح
+        const nextImpulseTargets = {
+            impulse_fib618: waves.wC.end.price + (direction * fullCorrectionLength * this.config.fib618),
+            impulse_fib1000: waves.wC.end.price + (direction * fullCorrectionLength * this.config.fib1000),
+            impulse_fib1618: waves.wC.end.price + (direction * fullCorrectionLength * this.config.fib1618),
+            impulse_fib2618: waves.wC.end.price + (direction * fullCorrectionLength * this.config.fib2618)
+        };
+        
         return {
-            // أهداف الموجة C بناءً على الموجة A
-            waveC_fib618: startPrice + (direction * wALength * this.config.fib618),
-            waveC_fib1000: startPrice + (direction * wALength * this.config.fib1000),
-            waveC_fib1272: startPrice + (direction * wALength * this.config.fib1272),
-            waveC_fib1618: startPrice + (direction * wALength * this.config.fib1618),
+            // أهداف مفصلة للموجة C
+            waveC_based_on_A: waveC_A_targets,
+            waveC_based_on_B: waveC_B_targets,
+            
+            // أهداف اكتمال التصحيح
+            completion_targets: completionTargets,
+            
+            // أهداف النمط الدافع القادم
+            next_impulse_targets: nextImpulseTargets,
+            
+            // الأهداف الأساسية (متوافق مع الكود القديم)
+            waveC_fib618: waveC_A_targets.fib618,
+            waveC_fib1000: waveC_A_targets.fib1000,
+            waveC_fib1272: waveC_A_targets.fib1272,
+            waveC_fib1618: waveC_A_targets.fib1618,
             
             // الهدف النهائي للتصحيح
             finalTarget: waves.wC.end.price,
             
-            // مستويات الدعم والمقاومة
+            // مستويات الدعم والمقاومة المحسنة
             support: isBullish ? waves.wA.start.price : waves.wC.end.price,
-            resistance: isBullish ? waves.wC.end.price : waves.wA.start.price
+            resistance: isBullish ? waves.wC.end.price : waves.wA.start.price,
+            
+            // مستويات إضافية
+            keyLevels: {
+                waveA_start: waves.wA.start.price,
+                waveA_end: waves.wB.start.price,
+                waveB_end: waves.wC.start.price,
+                waveC_end: waves.wC.end.price
+            },
+            
+            // تحليل الأولوية للأهداف التصحيحية
+            priority: this.calculateCorrectiveTargetPriority(waveC_A_targets, isBullish)
         };
     }
 

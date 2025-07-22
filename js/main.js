@@ -208,12 +208,128 @@ class WaveChart {
 
     markPattern(pattern) {
         if (!this.chart || !this.isInitialized) return;
-
-        // Add pattern overlay to chart
-        const color = pattern.direction === 'bullish' ? '#16a34a' : '#dc2626';
         
-        // This would be enhanced to show actual Elliott Wave patterns
-        console.log(`Marking ${pattern.type} pattern:`, pattern);
+        try {
+            console.log('Marking pattern:', pattern);
+            
+            // Add wave points as a new dataset
+            const waveColor = pattern.direction === 'bullish' ? '#16a34a' : '#dc2626';
+            
+            if (pattern.points && pattern.points.length > 1) {
+                // Create wave points dataset
+                const wavePoints = pattern.points.map((point, index) => ({
+                    x: new Date(point.time),
+                    y: parseFloat(point.price),
+                    label: this.getWaveLabel(pattern.type, index, pattern.points.length)
+                }));
+                
+                // Add wave line dataset
+                const waveLineDataset = {
+                    label: `موجة ${pattern.type === 'motive' ? 'دافعة' : 'تصحيحية'} ${pattern.direction === 'bullish' ? 'صاعدة' : 'هابطة'}`,
+                    data: wavePoints,
+                    borderColor: waveColor,
+                    backgroundColor: waveColor,
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 8,
+                    pointHoverRadius: 10,
+                    pointBackgroundColor: waveColor,
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    showLine: true,
+                    borderDash: [10, 5]
+                };
+                
+                // Add the dataset to the chart
+                this.chart.data.datasets.push(waveLineDataset);
+                this.chart.update();
+                
+                // Add custom labels using canvas overlay
+                this.addWaveLabels(wavePoints, waveColor);
+                
+                console.log(`Added wave pattern with ${wavePoints.length} points`);
+            }
+        } catch (error) {
+            console.error('Error marking pattern:', error);
+        }
+    }
+    
+    addWaveLabels(points, color) {
+        // This will add text labels on the chart
+        const canvas = document.getElementById('price-chart');
+        if (!canvas) return;
+        
+        // Store labels for redraw
+        if (!this.waveLabels) this.waveLabels = [];
+        
+        points.forEach((point, index) => {
+            this.waveLabels.push({
+                x: point.x,
+                y: point.y,
+                text: point.label,
+                color: color
+            });
+        });
+        
+        // Force a redraw to show labels
+        setTimeout(() => {
+            this.drawWaveLabels();
+        }, 100);
+    }
+    
+    drawWaveLabels() {
+        if (!this.waveLabels || !this.chart) return;
+        
+        const canvas = document.getElementById('price-chart');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Clear previous labels by redrawing chart
+        this.chart.update('none');
+        
+        // Draw labels on top
+        this.waveLabels.forEach(label => {
+            const canvasPosition = Chart.helpers.getRelativePosition({
+                x: this.chart.scales.x.getPixelForValue(label.x),
+                y: this.chart.scales.y.getPixelForValue(label.y)
+            }, this.chart);
+            
+            if (canvasPosition.x >= 0 && canvasPosition.y >= 0) {
+                ctx.save();
+                ctx.font = 'bold 14px Arial';
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = label.color;
+                ctx.lineWidth = 2;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Draw background circle
+                ctx.beginPath();
+                ctx.arc(canvasPosition.x, canvasPosition.y - 15, 12, 0, 2 * Math.PI);
+                ctx.fillStyle = label.color;
+                ctx.fill();
+                ctx.stroke();
+                
+                // Draw text
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(label.text, canvasPosition.x, canvasPosition.y - 15);
+                ctx.restore();
+            }
+        });
+    }
+    
+    getWaveLabel(patternType, index, totalPoints) {
+        if (patternType === 'motive') {
+            // Motive waves: 1, 2, 3, 4, 5
+            const motiveLabels = ['1', '2', '3', '4', '5'];
+            return motiveLabels[index] || `${index + 1}`;
+        } else {
+            // Corrective waves: A, B, C (or W, X, Y, Z for complex corrections)
+            const correctiveLabels = ['A', 'B', 'C', 'D', 'E'];
+            return correctiveLabels[index] || String.fromCharCode(65 + index);
+        }
     }
 }
 
