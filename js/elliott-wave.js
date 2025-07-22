@@ -433,6 +433,22 @@ class ElliottWaveAnalyzer {
         
         return Math.min(confidence, 100);
     }
+    
+    // حساب الأولوية للأهداف
+    calculateTargetPriority(wave5_w1_targets, wave5_w3_targets, isBullish) {
+        let priorityTargets = {};
+
+        // مثال لكيفية تقييم الأولوية ربما باستخدام نسب الاختراق والأهمية
+        if (isBullish) {
+            priorityTargets.mainTarget = wave5_w1_targets.fib618;
+            priorityTargets.secondaryTarget = wave5_w3_targets.fib382;
+        } else {
+            priorityTargets.mainTarget = wave5_w1_targets.fib382;
+            priorityTargets.secondaryTarget = wave5_w3_targets.fib618;
+        }
+
+        return priorityTargets;
+    }
 
     // حساب الأهداف السعرية الشاملة للموجات الدافعة
     calculateMotiveTargets(waves, isBullish) {
