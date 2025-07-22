@@ -12,8 +12,12 @@ class SecureBinanceAPI {
         this.config = {
             useTestnet: false,
             rateLimit: 1200, // requests per minute
-            requestInterval: 50 // minimum ms between requests
+            requestInterval: 50, // minimum ms between requests
+            useCORSProxy: false // Will be enabled if direct access fails
         };
+        
+        // Initialize CORS proxy
+        this.corsProxy = new CORSProxy();
         
         // API credentials (only needed for private endpoints)
         this.credentials = {
@@ -99,21 +103,56 @@ class SecureBinanceAPI {
         const queryString = new URLSearchParams(params).toString();
         const url = `${baseURL}${endpoint}${queryString ? '?' + queryString : ''}`;
         
-        try {
-            const response = await fetch(url, {
-                method: 'GET'
-                // Removed Content-Type header to avoid CORS preflight
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorData}`);
+        // Try direct request first
+        if (!this.config.useCORSProxy) {
+            try {
+                const response = await fetch(url, {
+                    method: 'GET'
+                    // Removed Content-Type header to avoid CORS preflight
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorData}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                // If direct request fails due to CORS, try with proxy
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    console.log('🔄 Direct request failed, trying with CORS proxy...');
+                    this.config.useCORSProxy = true;
+                    return await this.makeProxiedRequest(url);
+                }
+                throw error;
             }
-            
-            return await response.json();
+        } else {
+            // Use CORS proxy
+            return await this.makeProxiedRequest(url);
+        }
+    }
+    
+    /**
+     * Make request through CORS proxy
+     */
+    async makeProxiedRequest(url) {
+        try {
+            const data = await this.corsProxy.makeProxiedRequest(url);
+            console.log('✅ CORS proxy request successful');
+            return data;
         } catch (error) {
-            console.error(`Public API request failed for ${endpoint}:`, error);
-            throw error;
+            console.error('❌ CORS proxy request failed:', error);
+            
+            // Try switching to next proxy
+            this.corsProxy.switchProxy();
+            try {
+                const data = await this.corsProxy.makeProxiedRequest(url);
+                console.log('✅ Alternative proxy request successful');
+                return data;
+            } catch (secondError) {
+                console.error('❌ All proxy attempts failed');
+                throw new Error(`Both direct and proxy requests failed: ${error.message}`);
+            }
         }
     }
     
