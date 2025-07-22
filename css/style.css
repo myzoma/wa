@@ -1,0 +1,78 @@
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #1e40af;
+    --success-color: #16a34a;
+    --danger-color: #dc2626;
+    --warning-color: #f59e0b;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8fafc;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+#chart {
+    height: 600px;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+#analysis-results {
+    min-height: 200px;
+}
+
+.wave-pattern {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.wave-pattern.bullish {
+    background-color: rgba(22, 163, 74, 0.1);
+    border-left: 4px solid var(--success-color);
+}
+
+.wave-pattern.bearish {
+    background-color: rgba(220, 38, 38, 0.1);
+    border-left: 4px solid var(--danger-color);
+}
+
+.wave-pattern .wave-type {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.wave-pattern .wave-details {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 20px;
+    }
+    
+    #chart {
+        height: 400px;
+    }
+}

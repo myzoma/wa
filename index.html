@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محلل موجات اليوت</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#"><i class="fas fa-wave-square"></i> محلل موجات اليوت</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">الرئيسية</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">عن المشروع</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact">اتصل بنا</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Settings Panel -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">إعدادات التحليل</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">الزوج</label>
+                            <select id="symbol" class="form-select">
+                                <option value="BTCUSDT">BTC/USDT</option>
+                                <option value="ETHUSDT">ETH/USDT</option>
+                                <option value="BNBUSDT">BNB/USDT</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">الفترة الزمنية</label>
+                            <select id="interval" class="form-select">
+                                <option value="1h">1 ساعة</option>
+                                <option value="4h">4 ساعات</option>
+                                <option value="1d">يوم</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">عدد الشموع</label>
+                            <input type="number" id="candles" class="form-control" value="200">
+                        </div>
+                        <button id="analyze" class="btn btn-primary w-100">تحليل البيانات</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Area -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">الرسم البياني</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">نتائج التحليل</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="analysis-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/trading-vue-js@0.10.12/dist/trading-vue.min.js"></script>
+    <script>
+        // تهيئة TradingVue
+        TradingVue = {
+            Vue: Vue,
+            Data: window.Data,
+            TVEvents: window.TVEvents,
+            Indicators: window.Indicators
+        };
+    </script>
+    <script src="js/elliott-wave.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
