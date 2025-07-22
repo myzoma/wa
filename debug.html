@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Elliott Wave Analyzer</title>
+</head>
+<body>
+    <h1>Debug Elliott Wave Analyzer</h1>
+    <div id="debug-output"></div>
+
+    <!-- Load scripts in order -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        console.log('1. CryptoJS loaded:', typeof window.CryptoJS !== 'undefined');
+        document.getElementById('debug-output').innerHTML += '<p>1. CryptoJS loaded: ' + (typeof window.CryptoJS !== 'undefined') + '</p>';
+    </script>
+    
+    <script src="js/cors-proxy.js"></script>
+    <script>
+        console.log('2. CORSProxy loaded:', typeof window.CORSProxy !== 'undefined');
+        document.getElementById('debug-output').innerHTML += '<p>2. CORSProxy loaded: ' + (typeof window.CORSProxy !== 'undefined') + '</p>';
+    </script>
+    
+    <script src="js/binance-secure.js"></script>
+    <script>
+        console.log('3. SecureBinanceAPI loaded:', typeof window.SecureBinanceAPI !== 'undefined');
+        document.getElementById('debug-output').innerHTML += '<p>3. SecureBinanceAPI loaded: ' + (typeof window.SecureBinanceAPI !== 'undefined') + '</p>';
+        
+        if (typeof window.SecureBinanceAPI !== 'undefined') {
+            try {
+                const api = new SecureBinanceAPI();
+                console.log('4. SecureBinanceAPI instance created successfully');
+                document.getElementById('debug-output').innerHTML += '<p>4. SecureBinanceAPI instance created successfully</p>';
+            } catch (error) {
+                console.error('4. Error creating SecureBinanceAPI instance:', error);
+                document.getElementById('debug-output').innerHTML += '<p>4. Error creating SecureBinanceAPI instance: ' + error.message + '</p>';
+            }
+        }
+    </script>
+    
+    <script src="js/elliott-wave.js"></script>
+    <script>
+        console.log('5. ElliottWaveAnalyzer loaded:', typeof window.ElliottWaveAnalyzer !== 'undefined');
+        document.getElementById('debug-output').innerHTML += '<p>5. ElliottWaveAnalyzer loaded: ' + (typeof window.ElliottWaveAnalyzer !== 'undefined') + '</p>';
+    </script>
+
+</body>
+</html>
