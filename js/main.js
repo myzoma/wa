@@ -66,16 +66,21 @@ class WaveChart {
         
         // Create chart container with loading indicator
         this.element.innerHTML = `
-            <div class="chart-container position-relative">
-                <div id="chart-loading" class="position-absolute top-50 start-50 translate-middle text-center">
-                    <div class="spinner-border text-primary" role="status">
+            <div class="chart-wrapper position-relative w-100 h-100">
+                <div id="chart-loading" class="position-absolute top-50 start-50 translate-middle text-center text-white">
+                    <div class="spinner-border text-light" role="status">
                         <span class="visually-hidden">جاري التحميل...</span>
                     </div>
                     <div class="mt-2">جاري تحميل البيانات...</div>
                 </div>
-                <canvas id="price-chart" width="100%" height="400"></canvas>
+                <canvas id="price-chart" style="width: 100%; height: 100%;"></canvas>
             </div>
         `;
+        
+        // Initialize chart scale
+        this.zoomLevel = 1;
+        this.maxZoom = 3;
+        this.minZoom = 0.5;
     }
 
     showLoading(show = true) {
@@ -589,6 +594,9 @@ class ElliottWaveApp {
             this.settings.candles = parseInt(document.getElementById('candles').value);
             this.settings.saveSettings();
         });
+        
+        // Chart control listeners
+        this.setupChartControls();
     }
 
     async analyze() {
@@ -951,6 +959,120 @@ class ElliottWaveApp {
         html += '</div>';
         
         return html;
+    }
+    
+    // Setup chart control event listeners
+    setupChartControls() {
+        // Chart zoom in
+        document.getElementById('chart-zoom-in')?.addEventListener('click', () => {
+            this.zoomChart(1.2);
+        });
+        
+        // Chart zoom out
+        document.getElementById('chart-zoom-out')?.addEventListener('click', () => {
+            this.zoomChart(0.8);
+        });
+        
+        // Chart reset
+        document.getElementById('chart-reset')?.addEventListener('click', () => {
+            this.resetChart();
+        });
+        
+        // Chart fullscreen
+        document.getElementById('chart-fullscreen')?.addEventListener('click', () => {
+            this.toggleFullscreen();
+        });
+        
+        // Exit fullscreen on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isFullscreen) {
+                this.toggleFullscreen();
+            }
+        });
+    }
+    
+    // Zoom chart function
+    zoomChart(factor) {
+        if (!this.chart?.chart) return;
+        
+        try {
+            const chart = this.chart.chart;
+            if (chart.options?.scales?.x) {
+                const xAxis = chart.scales.x;
+                const currentMin = xAxis.min;
+                const currentMax = xAxis.max;
+                
+                if (currentMin && currentMax) {
+                    const range = currentMax - currentMin;
+                    const center = currentMin + (range / 2);
+                    const newRange = range / factor;
+                    
+                    chart.options.scales.x.min = center - (newRange / 2);
+                    chart.options.scales.x.max = center + (newRange / 2);
+                    
+                    chart.update('none');
+                }
+            }
+        } catch (error) {
+            console.error('Error zooming chart:', error);
+        }
+    }
+    
+    // Reset chart zoom
+    resetChart() {
+        if (!this.chart?.chart) return;
+        
+        try {
+            const chart = this.chart.chart;
+            if (chart.options?.scales?.x) {
+                delete chart.options.scales.x.min;
+                delete chart.options.scales.x.max;
+                chart.resetZoom();
+                chart.update();
+            }
+        } catch (error) {
+            console.error('Error resetting chart:', error);
+        }
+    }
+    
+    // Toggle fullscreen mode
+    toggleFullscreen() {
+        const chartContainer = document.querySelector('.chart-container');
+        const fullscreenBtn = document.getElementById('chart-fullscreen');
+        
+        if (!chartContainer || !fullscreenBtn) return;
+        
+        try {
+            this.isFullscreen = !this.isFullscreen;
+            
+            if (this.isFullscreen) {
+                // Enter fullscreen
+                chartContainer.classList.add('fullscreen');
+                fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                fullscreenBtn.title = 'الخروج من ملء الشاشة';
+                
+                // Update chart size
+                setTimeout(() => {
+                    if (this.chart?.chart) {
+                        this.chart.chart.resize();
+                    }
+                }, 100);
+            } else {
+                // Exit fullscreen
+                chartContainer.classList.remove('fullscreen');
+                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                fullscreenBtn.title = 'ملء الشاشة';
+                
+                // Update chart size
+                setTimeout(() => {
+                    if (this.chart?.chart) {
+                        this.chart.chart.resize();
+                    }
+                }, 100);
+            }
+        } catch (error) {
+            console.error('Error toggling fullscreen:', error);
+        }
     }
 }
 
