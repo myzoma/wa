@@ -562,8 +562,33 @@ class ElliottWaveApp {
 
 // Initialize application when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize the Elliott Wave Analyzer
-    window.elliottWaveApp = new ElliottWaveApp();
+    // Check if all required classes are available
+    if (typeof SecureBinanceAPI === 'undefined') {
+        console.error('SecureBinanceAPI is not defined. Make sure binance-secure.js is loaded before main.js');
+        return;
+    }
     
-    console.log('Elliott Wave Analyzer loaded successfully');
+    if (typeof ElliottWaveAnalyzer === 'undefined') {
+        console.error('ElliottWaveAnalyzer is not defined. Make sure elliott-wave.js is loaded before main.js');
+        return;
+    }
+    
+    try {
+        // Initialize the Elliott Wave Analyzer
+        window.elliottWaveApp = new ElliottWaveApp();
+        console.log('Elliott Wave Analyzer loaded successfully');
+    } catch (error) {
+        console.error('Failed to initialize Elliott Wave Analyzer:', error);
+        
+        // Display error message to user
+        const analysisResults = document.getElementById('analysis-results');
+        if (analysisResults) {
+            analysisResults.innerHTML = `
+                <div class=\"alert alert-danger\">
+                    <i class=\"fas fa-exclamation-triangle\"></i>
+                    فشل في تهيئة التطبيق: ${error.message}
+                </div>
+            `;
+        }
+    }
 });
