@@ -44,6 +44,8 @@ class SecureBinanceAPI {
             console.log('✅ Successfully connected to Binance API');
         } catch (error) {
             console.error('❌ Failed to connect to Binance API:', error);
+            console.log('💡 Note: If you see CORS errors, this is expected for direct browser access.');
+            console.log('💡 Consider using a CORS proxy or backend server for production use.');
         }
     }
     
@@ -99,10 +101,8 @@ class SecureBinanceAPI {
         
         try {
             const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                method: 'GET'
+                // Removed Content-Type header to avoid CORS preflight
             });
             
             if (!response.ok) {
