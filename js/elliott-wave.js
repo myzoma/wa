@@ -311,7 +311,8 @@ class ElliottWaveAnalyzer {
         // حساب أطوال الموجات
         const waves = {
             wA: { 
-                start: pA,end: pB, 
+                start: pA, 
+                end: pB, 
                 length: this.calculateWaveLength(pA, pB),
                 percentage: this.calculatePercentageChange(pA.price, pB.price)
             },
