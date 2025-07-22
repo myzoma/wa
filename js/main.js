@@ -105,27 +105,82 @@ class WaveChart {
                 this.chart.destroy();
             }
 
-            // Format data for Chart.js with proper timestamp conversion
-            const formattedData = data.map(d => ({
-                x: new Date(d.time), // Convert timestamp to Date object
-                y: parseFloat(d.close)
-            }));
+            // Format data for Chart.js with OHLC candlestick format
+            const formattedData = data.map(d => {
+                const open = parseFloat(d.open);
+                const high = parseFloat(d.high);
+                const low = parseFloat(d.low);
+                const close = parseFloat(d.close);
+                
+                return {
+                    x: new Date(d.time),
+                    o: open,   // Open price
+                    h: high,   // High price
+                    l: low,    // Low price
+                    c: close   // Close price
+                };
+            });
 
-            console.log('Formatted chart data:', formattedData.slice(0, 5)); // Log first 5 points
+            console.log('Formatted candlestick data:', formattedData.slice(0, 5)); // Log first 5 points
 
-            // Prepare data for Chart.js
+            // Create line chart with OHLC data simulation
+            const candlestickBodies = [];
+            const candlestickWicks = [];
+            
+            formattedData.forEach(candle => {
+                const isBullish = candle.c >= candle.o;
+                const color = isBullish ? '#16a34a' : '#dc2626';
+                const bgColor = isBullish ? 'rgba(22, 163, 74, 0.8)' : 'rgba(220, 38, 38, 0.8)';
+                
+                // Body (من Open إلى Close)
+                candlestickBodies.push({
+                    x: candle.x,
+                    y: candle.c // Close price for line
+                });
+                
+                // Wicks (High-Low) will be shown as error bars or separate dataset
+                candlestickWicks.push({
+                    x: candle.x,
+                    yMin: candle.l,  // Low
+                    yMax: candle.h   // High
+                });
+            });
+
+            // Prepare data for Chart.js with line chart simulating candlesticks
             const chartData = {
-                datasets: [{
-                    label: 'سعر الإغلاق',
-                    data: formattedData,
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    borderWidth: 2,
-                    fill: false, // Changed to false for better visibility
-                    tension: 0.1,
-                    pointRadius: 0, // Hide points for cleaner look
-                    pointHoverRadius: 5
-                }]
+                datasets: [
+                    {
+                        label: 'أسعار الإغلاق',
+                        data: candlestickBodies,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 1,
+                        fill: false,
+                        tension: 0,
+                        pointRadius: 0,
+                        pointHoverRadius: 3
+                    },
+                    {
+                        label: 'المدى (High-Low)',
+                        data: formattedData.map(candle => ({
+                            x: candle.x,
+                            y: [candle.l, candle.h] // Error bars for High-Low range
+                        })),
+                        type: 'bar',
+                        backgroundColor: function(ctx) {
+                            const candle = formattedData[ctx.dataIndex];
+                            return candle.c >= candle.o ? 'rgba(22, 163, 74, 0.3)' : 'rgba(220, 38, 38, 0.3)';
+                        },
+                        borderColor: function(ctx) {
+                            const candle = formattedData[ctx.dataIndex];
+                            return candle.c >= candle.o ? '#16a34a' : '#dc2626';
+                        },
+                        borderWidth: 1,
+                        barPercentage: 0.8,
+                        categoryPercentage: 0.9,
+                        yAxisID: 'y'
+                    }
+                ]
             };
 
             const config = {
@@ -290,31 +345,44 @@ class WaveChart {
         this.chart.update('none');
         
         // Draw labels on top
-        this.waveLabels.forEach(label => {
-            const canvasPosition = Chart.helpers.getRelativePosition({
-                x: this.chart.scales.x.getPixelForValue(label.x),
-                y: this.chart.scales.y.getPixelForValue(label.y)
-            }, this.chart);
+        this.waveLabels.forEach((label, index) => {
+            const pixelX = this.chart.scales.x.getPixelForValue(label.x);
+            const pixelY = this.chart.scales.y.getPixelForValue(label.y);
             
-            if (canvasPosition.x >= 0 && canvasPosition.y >= 0) {
+            if (pixelX >= 0 && pixelY >= 0) {
                 ctx.save();
-                ctx.font = 'bold 14px Arial';
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = label.color;
-                ctx.lineWidth = 2;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
                 
-                // Draw background circle
+                // حساب موضع التسمية (أعلى أو أسفل النقطة)
+                const isEven = index % 2 === 0;
+                const offsetY = isEven ? -25 : 25; // تبديل الموضع لتجنب التداخل
+                
+                const labelX = pixelX;
+                const labelY = pixelY + offsetY;
+                
+                // رسم دائرة الخلفية
                 ctx.beginPath();
-                ctx.arc(canvasPosition.x, canvasPosition.y - 15, 12, 0, 2 * Math.PI);
+                ctx.arc(labelX, labelY, 16, 0, 2 * Math.PI);
                 ctx.fillStyle = label.color;
                 ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3;
                 ctx.stroke();
                 
-                // Draw text
+                // رسم النص
+                ctx.font = 'bold 16px Arial';
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(label.text, canvasPosition.x, canvasPosition.y - 15);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label.text, labelX, labelY);
+                
+                // رسم خط يربط التسمية بالنقطة
+                ctx.beginPath();
+                ctx.moveTo(pixelX, pixelY);
+                ctx.lineTo(labelX, labelY - 16);
+                ctx.strokeStyle = label.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
                 ctx.restore();
             }
         });
@@ -654,7 +722,7 @@ class ElliottWaveApp {
             </div>
         `;
 
-        // Display top patterns
+        // Display top patterns with detailed targets
         html += '<div class="patterns-list">';
         analysis.patterns.slice(0, 3).forEach((pattern, index) => {
             const confidenceColor = pattern.confidence >= 80 ? 'success' : 
@@ -671,16 +739,21 @@ class ElliottWaveApp {
                         <span class="badge bg-${confidenceColor}">${pattern.confidence.toFixed(1)}% ثقة</span>
                     </div>
                     <div class="pattern-details mt-2">
-                        <div class="row">
-                            <div class="col-6">
+                        <div class="row mb-2">
+                            <div class="col-4">
                                 <small class="text-muted">عدد النقاط:</small>
                                 <div>${pattern.points.length}</div>
                             </div>
-                            <div class="col-6">
+                            <div class="col-4">
                                 <small class="text-muted">النوع:</small>
                                 <div>${this.translatePatternType(pattern.type)}</div>
                             </div>
+                            <div class="col-4">
+                                <small class="text-muted">الترقيم:</small>
+                                <div>${this.getPatternNumbering(pattern)}</div>
+                            </div>
                         </div>
+                        ${this.generateTargetsHtml(pattern)}
                     </div>
                 </div>
             `;
@@ -741,6 +814,143 @@ class ElliottWaveApp {
                 ${message}
             </div>
         `;
+    }
+
+    // إنشاء ترقيم النمط
+    getPatternNumbering(pattern) {
+        if (pattern.type === 'motive') {
+            return '1-2-3-4-5';
+        } else {
+            return 'A-B-C';
+        }
+    }
+
+    // إنشاء HTML للأهداف السعرية
+    generateTargetsHtml(pattern) {
+        if (!pattern.targets) return '';
+        
+        let html = '<div class="targets-section mt-3">';
+        html += '<h6 class="mb-2"><i class="fas fa-bullseye"></i> الأهداف السعرية</h6>';
+        
+        if (pattern.type === 'motive') {
+            html += this.generateMotiveTargetsHtml(pattern.targets);
+        } else {
+            html += this.generateCorrectiveTargetsHtml(pattern.targets);
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    // أهداف النمط الدافع
+    generateMotiveTargetsHtml(targets) {
+        let html = '<div class="row text-center">';
+        
+        // الأهداف الأساسية
+        if (targets.wave5_fib618) {
+            html += `
+                <div class="col-4">
+                    <div class="target-item">
+                        <small class="text-muted">فيب 61.8%</small>
+                        <div class="fw-bold text-success">${this.formatPrice(targets.wave5_fib618)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (targets.wave5_fib1000) {
+            html += `
+                <div class="col-4">
+                    <div class="target-item">
+                        <small class="text-muted">فيب 100%</small>
+                        <div class="fw-bold text-primary">${this.formatPrice(targets.wave5_fib1000)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (targets.wave5_fib1618) {
+            html += `
+                <div class="col-4">
+                    <div class="target-item">
+                        <small class="text-muted">فيب 161.8%</small>
+                        <div class="fw-bold text-warning">${this.formatPrice(targets.wave5_fib1618)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        
+        // مستويات الدعم والمقاومة
+        if (targets.support || targets.resistance) {
+            html += '<hr><div class="row text-center mt-2">';
+            
+            if (targets.support) {
+                html += `
+                    <div class="col-6">
+                        <small class="text-muted">الدعم</small>
+                        <div class="text-success">${this.formatPrice(targets.support)}</div>
+                    </div>
+                `;
+            }
+            
+            if (targets.resistance) {
+                html += `
+                    <div class="col-6">
+                        <small class="text-muted">المقاومة</small>
+                        <div class="text-danger">${this.formatPrice(targets.resistance)}</div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+        }
+        
+        return html;
+    }
+
+    // أهداف النمط التصحيحي
+    generateCorrectiveTargetsHtml(targets) {
+        let html = '<div class="row text-center">';
+        
+        // الأهداف الأساسية
+        if (targets.waveC_fib618) {
+            html += `
+                <div class="col-4">
+                    <div class="target-item">
+                        <small class="text-muted">C = 61.8% A</small>
+                        <div class="fw-bold text-success">${this.formatPrice(targets.waveC_fib618)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (targets.waveC_fib1000) {
+            html += `
+                <div class="col-4">
+                    <div class="target-item">
+                        <small class="text-muted">C = 100% A</small>
+                        <div class="fw-bold text-primary">${this.formatPrice(targets.waveC_fib1000)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (targets.waveC_fib1618) {
+            html += `
+                <div class="col-4">
+                    <div class="target-item">
+                        <small class="text-muted">C = 161.8% A</small>
+                        <div class="fw-bold text-warning">${this.formatPrice(targets.waveC_fib1618)}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        
+        return html;
     }
 }
 
