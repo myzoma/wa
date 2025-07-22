@@ -90,9 +90,14 @@ class WaveChart {
             this.showLoading(true);
             this.data = data;
             
+            console.log('Drawing chart with data:', data);
+            
             // Use Chart.js for better performance and Arabic support
             const canvas = document.getElementById('price-chart');
-            if (!canvas) return;
+            if (!canvas) {
+                console.error('Canvas element not found');
+                return;
+            }
             
             const ctx = canvas.getContext('2d');
             
@@ -100,19 +105,26 @@ class WaveChart {
                 this.chart.destroy();
             }
 
+            // Format data for Chart.js with proper timestamp conversion
+            const formattedData = data.map(d => ({
+                x: new Date(d.time), // Convert timestamp to Date object
+                y: parseFloat(d.close)
+            }));
+
+            console.log('Formatted chart data:', formattedData.slice(0, 5)); // Log first 5 points
+
             // Prepare data for Chart.js
             const chartData = {
                 datasets: [{
                     label: 'سعر الإغلاق',
-                    data: data.map(d => ({
-                        x: d.time,
-                        y: d.close
-                    })),
+                    data: formattedData,
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
                     borderWidth: 2,
-                    fill: true,
-                    tension: 0.1
+                    fill: false, // Changed to false for better visibility
+                    tension: 0.1,
+                    pointRadius: 0, // Hide points for cleaner look
+                    pointHoverRadius: 5
                 }]
             };
 
@@ -125,16 +137,17 @@ class WaveChart {
                     plugins: {
                         title: {
                             display: true,
-                            text: 'الرسم البياني للسعر',
+                            text: `الرسم البياني للسعر - ${data[0] ? data[0].symbol || 'BTCUSDT' : 'BTCUSDT'}`,
                             font: {
-                                family: 'Cairo, Arial, sans-serif',
+                                family: 'Arial, sans-serif',
                                 size: 16
                             }
                         },
                         legend: {
+                            display: true,
                             labels: {
                                 font: {
-                                    family: 'Cairo, Arial, sans-serif'
+                                    family: 'Arial, sans-serif'
                                 }
                             }
                         }
@@ -143,24 +156,25 @@ class WaveChart {
                         x: {
                             type: 'time',
                             time: {
+                                unit: 'hour',
                                 displayFormats: {
                                     hour: 'HH:mm',
                                     day: 'DD/MM'
                                 }
                             },
-                            ticks: {
-                                font: {
-                                    family: 'Cairo, Arial, sans-serif'
-                                }
+                            title: {
+                                display: true,
+                                text: 'الوقت'
                             }
                         },
                         y: {
+                            title: {
+                                display: true,
+                                text: 'السعر (USDT)'
+                            },
                             ticks: {
-                                font: {
-                                    family: 'Cairo, Arial, sans-serif'
-                                },
                                 callback: function(value) {
-                                    return new Intl.NumberFormat('ar-SA').format(value);
+                                    return '$' + value.toLocaleString();
                                 }
                             }
                         }
@@ -175,9 +189,11 @@ class WaveChart {
             this.chart = new Chart(ctx, config);
             this.isInitialized = true;
             this.showLoading(false);
+            console.log('Chart created successfully');
         } catch (error) {
             console.error('Error drawing chart:', error);
-            this.showError('فشل في رسم البيانات');
+            this.showError(`فشل في رسم البيانات: ${error.message}`);
+            this.showLoading(false);
         }
     }
 
@@ -269,6 +285,14 @@ class ElliottWaveApp {
 
         // Set candles input
         document.getElementById('candles').value = this.settings.candles;
+        
+        // Set API keys if they exist (show dots for security)
+        if (this.settings.apiKey) {
+            document.getElementById('apiKey').value = '••••••••';
+        }
+        if (this.settings.secretKey) {
+            document.getElementById('secretKey').value = '••••••••';
+        }
         
         // Add status indicator
         this.createStatusIndicator();
