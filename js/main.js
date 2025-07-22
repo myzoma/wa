@@ -11,6 +11,8 @@ class AnalyzerSettings {
         this.candles = 200;
         this.updateInterval = 30000; // 30 seconds
         this.autoUpdate = false;
+        this.apiKey = '';
+        this.secretKey = '';
         this.loadSettings();
     }
 
@@ -35,7 +37,9 @@ class AnalyzerSettings {
                 interval: this.interval,
                 candles: this.candles,
                 updateInterval: this.updateInterval,
-                autoUpdate: this.autoUpdate
+                autoUpdate: this.autoUpdate,
+                apiKey: this.apiKey,
+                secretKey: this.secretKey
             }));
         } catch (error) {
             console.warn('Failed to save settings:', error);
@@ -201,7 +205,8 @@ class WaveChart {
 class ElliottWaveApp {
     constructor() {
         this.settings = new AnalyzerSettings();
-        this.binanceAPI = new SecureBinanceAPI();
+        // Initialize Binance API with credentials if available
+        this.binanceAPI = new SecureBinanceAPI(this.settings.apiKey, this.settings.secretKey);
         this.chart = new WaveChart('chart');
         this.analyzer = new ElliottWaveAnalyzer({
             len1: 4,
@@ -300,15 +305,49 @@ class ElliottWaveApp {
         }
     }
 
+    async saveApiKeys() {
+        try {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const secretKey = document.getElementById('secretKey').value.trim();
+            
+            // Save to settings
+            this.settings.apiKey = apiKey;
+            this.settings.secretKey = secretKey;
+            this.settings.saveSettings();
+            
+            // Update API instance
+            this.binanceAPI = new SecureBinanceAPI(apiKey, secretKey);
+            
+            // Show success message
+            const button = document.getElementById('saveApiKeys');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i> تم الحفظ!';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 2000);
+            
+            // Test connection with new keys
+            await this.testBinanceConnection();
+            
+            console.log('API keys saved successfully');
+        } catch (error) {
+            console.error('Failed to save API keys:', error);
+            this.updateStatus('error', 'فشل في حفظ مفاتيح API');
+        }
+    }
+    
     async testBinanceConnection() {
         try {
             this.updateStatus('connecting', 'جاري الاتصال بـ Binance...');
             const result = await this.binanceAPI.testConnection();
             
-            if (result.status === 'connected') {
-                this.updateStatus('connected', 'متصل بـ Binance API ✓');
+            if (result) {
+                this.updateStatus('connected', `متصل بـ Binance API ✓${this.binanceAPI.credentials.isAuthenticated ? ' (مع مصادقة)' : ''}`);
             } else {
-                this.updateStatus('error', 'فشل الاتصال بـ Binance');
+                this.updateStatus('connected', 'متصل بـ Binance API (عام)');
             }
         } catch (error) {
             this.updateStatus('error', 'خطأ في الاتصال');
@@ -320,6 +359,11 @@ class ElliottWaveApp {
         // Analyze button
         document.getElementById('analyze').addEventListener('click', () => {
             this.analyze();
+        });
+        
+        // Save API keys button
+        document.getElementById('saveApiKeys').addEventListener('click', () => {
+            this.saveApiKeys();
         });
 
         // Settings change listeners

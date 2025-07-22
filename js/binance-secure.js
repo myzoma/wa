@@ -4,7 +4,7 @@
  */
 
 class SecureBinanceAPI {
-    constructor() {
+    constructor(apiKey = null, secretKey = null) {
         this.baseURL = 'https://api.binance.com';
         this.testnetURL = 'https://testnet.binance.vision';
         
@@ -12,18 +12,19 @@ class SecureBinanceAPI {
         this.config = {
             useTestnet: false,
             rateLimit: 1200, // requests per minute
-            requestInterval: 50, // minimum ms between requests
-            useCORSProxy: false // Will be enabled if direct access fails
+            requestInterval: 100, // minimum ms between requests
+            useCORSProxy: false, // Disabled when using API keys
+            useDirectAPI: true // Use direct API with authentication
         };
         
-        // Initialize CORS proxy
+        // Initialize CORS proxy (fallback only)
         this.corsProxy = new CORSProxy();
         
-        // API credentials (only needed for private endpoints)
+        // API credentials
         this.credentials = {
-            apiKey: null,
-            secretKey: null,
-            isAuthenticated: false
+            apiKey: apiKey,
+            secretKey: secretKey,
+            isAuthenticated: !!(apiKey && secretKey)
         };
         
         // Rate limiting
@@ -97,38 +98,97 @@ class SecureBinanceAPI {
      * Make public API request (no authentication required)
      */
     async makePublicRequest(endpoint, params = {}) {
+        return await this.makeRequest(endpoint, params, false);
+    }
+    
+    /**
+     * Make authenticated API request
+     */
+    async makeAuthenticatedRequest(endpoint, params = {}, method = 'GET') {
+        if (!this.credentials.isAuthenticated) {
+            throw new Error('API key and secret are required for authenticated requests');
+        }
+        return await this.makeRequest(endpoint, params, true, method);
+    }
+    
+    /**
+     * Generate HMAC SHA256 signature for authenticated requests
+     */
+    generateSignature(queryString) {
+        if (!window.CryptoJS) {
+            throw new Error('CryptoJS library is required for API authentication');
+        }
+        return window.CryptoJS.HmacSHA256(queryString, this.credentials.secretKey).toString();
+    }
+    
+    /**
+     * Make HTTP request (public or authenticated)
+     */
+    async makeRequest(endpoint, params = {}, requiresAuth = false, method = 'GET') {
         await this.enforceRateLimit();
         
         const baseURL = this.config.useTestnet ? this.testnetURL : this.baseURL;
-        const queryString = new URLSearchParams(params).toString();
-        const url = `${baseURL}${endpoint}${queryString ? '?' + queryString : ''}`;
         
-        // Try direct request first
-        if (!this.config.useCORSProxy) {
+        // Add timestamp for authenticated requests
+        if (requiresAuth) {
+            params.timestamp = Date.now();
+        }
+        
+        // Create query string
+        const queryString = new URLSearchParams(params).toString();
+        
+        // Generate signature for authenticated requests
+        if (requiresAuth) {
+            const signature = this.generateSignature(queryString);
+            params.signature = signature;
+        }
+        
+        const finalQueryString = new URLSearchParams(params).toString();
+        const url = `${baseURL}${endpoint}${finalQueryString ? '?' + finalQueryString : ''}`;
+        
+        // Set headers
+        const headers = {};
+        if (requiresAuth && this.credentials.apiKey) {
+            headers['X-MBX-APIKEY'] = this.credentials.apiKey;
+        }
+        
+        // Try direct request first (preferred method)
+        if (this.config.useDirectAPI && !this.config.useCORSProxy) {
             try {
-                const response = await fetch(url, {
-                    method: 'GET'
-                    // Removed Content-Type header to avoid CORS preflight
-                });
+                const requestOptions = {
+                    method: method,
+                    headers: headers
+                };
+                
+                const response = await fetch(url, requestOptions);
                 
                 if (!response.ok) {
                     const errorData = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errorData}`);
+                    let errorMessage;
+                    try {
+                        const errorJson = JSON.parse(errorData);
+                        errorMessage = errorJson.msg || errorData;
+                    } catch {
+                        errorMessage = errorData;
+                    }
+                    throw new Error(`Binance API Error ${response.status}: ${errorMessage}`);
                 }
                 
                 return await response.json();
             } catch (error) {
-                // If direct request fails due to CORS, try with proxy
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                // If direct request fails due to CORS, fall back to proxy (public endpoints only)
+                if (!requiresAuth && (error.name === 'TypeError' && error.message.includes('fetch'))) {
                     console.log('🔄 Direct request failed, trying with CORS proxy...');
                     this.config.useCORSProxy = true;
-                    return await this.makeProxiedRequest(url);
+                    return await this.makeProxiedRequest(baseURL + endpoint + (finalQueryString ? '?' + finalQueryString : ''));
                 }
                 throw error;
             }
-        } else {
-            // Use CORS proxy
+        } else if (!requiresAuth) {
+            // Use CORS proxy for public endpoints only
             return await this.makeProxiedRequest(url);
+        } else {
+            throw new Error('Authenticated requests require direct API access (CORS proxy not supported)');
         }
     }
     
