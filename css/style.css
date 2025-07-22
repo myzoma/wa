@@ -66,6 +66,26 @@ body {
     color: #64748b;
 }
 
+/* Status Indicator Styles */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.bg-success {
+    background-color: var(--success-color);
+}
+
+.status-dot.bg-danger {
+    background-color: var(--danger-color);
+}
+
+.status-dot.bg-warning {
+    background-color: var(--warning-color);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .card {
