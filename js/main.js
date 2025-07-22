@@ -97,7 +97,7 @@ class WaveChart {
             
             console.log('Drawing chart with data:', data);
             
-            // Use Chart.js for better performance and Arabic support
+            // Use Chart.js for better performance
             const canvas = document.getElementById('price-chart');
             if (!canvas) {
                 console.error('Canvas element not found');
@@ -110,104 +110,216 @@ class WaveChart {
                 this.chart.destroy();
             }
 
-            // Format data for Chart.js with OHLC candlestick format
-            const formattedData = data.map(d => {
+            // Format data for enhanced candlestick visualization
+            const candlestickData = data.map(d => {
                 const open = parseFloat(d.open);
                 const high = parseFloat(d.high);
                 const low = parseFloat(d.low);
                 const close = parseFloat(d.close);
+                const isBullish = close >= open;
                 
                 return {
                     x: new Date(d.time),
-                    o: open,   // Open price
-                    h: high,   // High price
-                    l: low,    // Low price
-                    c: close   // Close price
+                    o: open,
+                    h: high,
+                    l: low,
+                    c: close,
+                    isBullish: isBullish,
+                    color: isBullish ? '#22c55e' : '#ef4444',
+                    bodyColor: isBullish ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+                    wickColor: isBullish ? '#16a34a' : '#dc2626'
                 };
             });
 
-            console.log('Formatted candlestick data:', formattedData.slice(0, 5)); // Log first 5 points
+            console.log('Formatted candlestick data:', candlestickData.slice(0, 5));
 
-            // Create line chart with OHLC data simulation
-            const candlestickBodies = [];
-            const candlestickWicks = [];
+            // Create custom candlestick datasets
+            const datasets = [];
             
-            formattedData.forEach(candle => {
-                const isBullish = candle.c >= candle.o;
-                const color = isBullish ? '#16a34a' : '#dc2626';
-                const bgColor = isBullish ? 'rgba(22, 163, 74, 0.8)' : 'rgba(220, 38, 38, 0.8)';
+            // Candlestick bodies (rectangles)
+            const bullishBodies = [];
+            const bearishBodies = [];
+            
+            // Candlestick wicks (lines)
+            const bullishWicks = [];
+            const bearishWicks = [];
+            
+            candlestickData.forEach((candle, index) => {
+                const bodyHeight = Math.abs(candle.c - candle.o);
+                const bodyTop = Math.max(candle.c, candle.o);
+                const bodyBottom = Math.min(candle.c, candle.o);
                 
-                // Body (من Open إلى Close)
-                candlestickBodies.push({
-                    x: candle.x,
-                    y: candle.c // Close price for line
-                });
-                
-                // Wicks (High-Low) will be shown as error bars or separate dataset
-                candlestickWicks.push({
-                    x: candle.x,
-                    yMin: candle.l,  // Low
-                    yMax: candle.h   // High
-                });
+                // Add body data
+                if (candle.isBullish) {
+                    bullishBodies.push({
+                        x: candle.x,
+                        y: [bodyBottom, bodyTop]
+                    });
+                    bullishWicks.push({
+                        x: candle.x,
+                        y: [candle.l, candle.h]
+                    });
+                } else {
+                    bearishBodies.push({
+                        x: candle.x,
+                        y: [bodyBottom, bodyTop]
+                    });
+                    bearishWicks.push({
+                        x: candle.x,
+                        y: [candle.l, candle.h]
+                    });
+                }
             });
 
-            // Prepare data for Chart.js with line chart simulating candlesticks
-            const chartData = {
-                datasets: [
-                    {
-                        label: 'أسعار الإغلاق',
-                        data: candlestickBodies,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                        borderWidth: 1,
-                        fill: false,
-                        tension: 0,
-                        pointRadius: 0,
-                        pointHoverRadius: 3
-                    },
-                    {
-                        label: 'المدى (High-Low)',
-                        data: formattedData.map(candle => ({
-                            x: candle.x,
-                            y: [candle.l, candle.h] // Error bars for High-Low range
-                        })),
-                        type: 'bar',
-                        backgroundColor: function(ctx) {
-                            const candle = formattedData[ctx.dataIndex];
-                            return candle.c >= candle.o ? 'rgba(22, 163, 74, 0.3)' : 'rgba(220, 38, 38, 0.3)';
-                        },
-                        borderColor: function(ctx) {
-                            const candle = formattedData[ctx.dataIndex];
-                            return candle.c >= candle.o ? '#16a34a' : '#dc2626';
-                        },
-                        borderWidth: 1,
-                        barPercentage: 0.8,
-                        categoryPercentage: 0.9,
-                        yAxisID: 'y'
-                    }
-                ]
-            };
+            // Add bullish candlestick wicks
+            if (bullishWicks.length > 0) {
+                datasets.push({
+                    label: 'Bullish Wicks',
+                    data: bullishWicks,
+                    type: 'bar',
+                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                    borderColor: '#22c55e',
+                    borderWidth: 1,
+                    barPercentage: 0.1,
+                    categoryPercentage: 1.0,
+                    yAxisID: 'y',
+                    order: 2
+                });
+            }
+            
+            // Add bearish candlestick wicks
+            if (bearishWicks.length > 0) {
+                datasets.push({
+                    label: 'Bearish Wicks',
+                    data: bearishWicks,
+                    type: 'bar',
+                    backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                    barPercentage: 0.1,
+                    categoryPercentage: 1.0,
+                    yAxisID: 'y',
+                    order: 2
+                });
+            }
+            
+            // Add bullish candlestick bodies
+            if (bullishBodies.length > 0) {
+                datasets.push({
+                    label: 'Bullish Candles',
+                    data: bullishBodies,
+                    type: 'bar',
+                    backgroundColor: 'rgba(34, 197, 94, 0.9)',
+                    borderColor: '#16a34a',
+                    borderWidth: 1,
+                    barPercentage: 0.6,
+                    categoryPercentage: 1.0,
+                    yAxisID: 'y',
+                    order: 1
+                });
+            }
+            
+            // Add bearish candlestick bodies
+            if (bearishBodies.length > 0) {
+                datasets.push({
+                    label: 'Bearish Candles',
+                    data: bearishBodies,
+                    type: 'bar',
+                    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                    borderColor: '#dc2626',
+                    borderWidth: 1,
+                    barPercentage: 0.6,
+                    categoryPercentage: 1.0,
+                    yAxisID: 'y',
+                    order: 1
+                });
+            }
+            
+            // Add price line for better visibility
+            datasets.push({
+                label: 'Close Price',
+                data: candlestickData.map(candle => ({
+                    x: candle.x,
+                    y: candle.c
+                })),
+                type: 'line',
+                borderColor: 'rgba(59, 130, 246, 0.8)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 1,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                order: 0
+            });
+
+            const chartData = { datasets };
 
             const config = {
-                type: 'line',
+                type: 'bar',
                 data: chartData,
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: false,
                     plugins: {
                         title: {
                             display: true,
-                            text: `الرسم البياني للسعر - ${data[0] ? data[0].symbol || 'BTCUSDT' : 'BTCUSDT'}`,
+                            text: `Price Chart - ${data[0] ? data[0].symbol || 'BTCUSDT' : 'BTCUSDT'}`,
+                            color: '#ffffff',
                             font: {
                                 family: 'Arial, sans-serif',
-                                size: 16
+                                size: 16,
+                                weight: 'bold'
                             }
                         },
                         legend: {
-                            display: true,
-                            labels: {
-                                font: {
-                                    family: 'Arial, sans-serif'
+                            display: false
+                        },
+                        zoom: {
+                            limits: {
+                                x: {min: 'original', max: 'original'},
+                                y: {min: 'original', max: 'original'}
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
+                                modifierKey: 'ctrl'
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x'
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            callbacks: {
+                                title: function(context) {
+                                    return new Date(context[0].parsed.x).toLocaleString('en-US');
+                                },
+                                label: function(context) {
+                                    const dataIndex = context.dataIndex;
+                                    const candle = candlestickData[dataIndex];
+                                    if (candle) {
+                                        return [
+                                            `Open: $${candle.o.toFixed(4)}`,
+                                            `High: $${candle.h.toFixed(4)}`,
+                                            `Low: $${candle.l.toFixed(4)}`,
+                                            `Close: $${candle.c.toFixed(4)}`
+                                        ];
+                                    }
+                                    return [];
                                 }
                             }
                         }
@@ -219,23 +331,47 @@ class WaveChart {
                                 unit: 'hour',
                                 displayFormats: {
                                     hour: 'HH:mm',
-                                    day: 'DD/MM'
+                                    day: 'MM/DD',
+                                    week: 'MM/DD',
+                                    month: 'MM/YY'
                                 }
                             },
                             title: {
                                 display: true,
-                                text: 'الوقت'
+                                text: 'Time',
+                                color: '#9ca3af',
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                maxTicksLimit: 20
+                            },
+                            grid: {
+                                color: 'rgba(156, 163, 175, 0.2)'
                             }
                         },
                         y: {
                             title: {
                                 display: true,
-                                text: 'السعر (USDT)'
+                                text: 'Price (USDT)',
+                                color: '#9ca3af',
+                                font: {
+                                    size: 12
+                                }
                             },
                             ticks: {
+                                color: '#9ca3af',
                                 callback: function(value) {
-                                    return '$' + value.toLocaleString();
+                                    return '$' + parseFloat(value).toLocaleString('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 6
+                                    });
                                 }
+                            },
+                            grid: {
+                                color: 'rgba(156, 163, 175, 0.2)'
                             }
                         }
                     },
@@ -249,10 +385,10 @@ class WaveChart {
             this.chart = new Chart(ctx, config);
             this.isInitialized = true;
             this.showLoading(false);
-            console.log('Chart created successfully');
+            console.log('Enhanced candlestick chart created successfully');
         } catch (error) {
             console.error('Error drawing chart:', error);
-            this.showError(`فشل في رسم البيانات: ${error.message}`);
+            this.showError(`Failed to draw chart: ${error.message}`);
             this.showLoading(false);
         }
     }
@@ -808,7 +944,7 @@ class ElliottWaveApp {
     }
 
     formatPrice(price) {
-        return new Intl.NumberFormat('ar-SA', {
+        return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 8
         }).format(price);
@@ -997,20 +1133,11 @@ class ElliottWaveApp {
         
         try {
             const chart = this.chart.chart;
-            if (chart.options?.scales?.x) {
-                const xAxis = chart.scales.x;
-                const currentMin = xAxis.min;
-                const currentMax = xAxis.max;
-                
-                if (currentMin && currentMax) {
-                    const range = currentMax - currentMin;
-                    const center = currentMin + (range / 2);
-                    const newRange = range / factor;
-                    
-                    chart.options.scales.x.min = center - (newRange / 2);
-                    chart.options.scales.x.max = center + (newRange / 2);
-                    
-                    chart.update('none');
+            if (chart.zoom) {
+                if (factor > 1) {
+                    chart.zoom(factor);
+                } else {
+                    chart.zoom(factor);
                 }
             }
         } catch (error) {
@@ -1024,11 +1151,8 @@ class ElliottWaveApp {
         
         try {
             const chart = this.chart.chart;
-            if (chart.options?.scales?.x) {
-                delete chart.options.scales.x.min;
-                delete chart.options.scales.x.max;
+            if (chart.resetZoom) {
                 chart.resetZoom();
-                chart.update();
             }
         } catch (error) {
             console.error('Error resetting chart:', error);
