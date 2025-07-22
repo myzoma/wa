@@ -450,6 +450,26 @@ class ElliottWaveAnalyzer {
         return priorityTargets;
     }
 
+    // حساب الأولوية لأهداف الأنماط التصحيحية
+    calculateCorrectiveTargetPriority(waveC_A_targets, isBullish) {
+        let priorityTargets = {};
+        
+        // تحديد الأهداف الرئيسية للأنماط التصحيحية
+        if (isBullish) {
+            // في التصحيح الصاعد، الأهداف الشائعة
+            priorityTargets.mainTarget = waveC_A_targets.fib1000;
+            priorityTargets.secondaryTarget = waveC_A_targets.fib1618;
+            priorityTargets.conservativeTarget = waveC_A_targets.fib618;
+        } else {
+            // في التصحيح الهابط، الأهداف الشائعة
+            priorityTargets.mainTarget = waveC_A_targets.fib1000;
+            priorityTargets.secondaryTarget = waveC_A_targets.fib1272;
+            priorityTargets.conservativeTarget = waveC_A_targets.fib618;
+        }
+        
+        return priorityTargets;
+    }
+
     // حساب الأهداف السعرية الشاملة للموجات الدافعة
     calculateMotiveTargets(waves, isBullish) {
         const w1Length = waves.w1.length;
